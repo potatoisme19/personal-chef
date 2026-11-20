@@ -1,0 +1,8 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "dependencies": ["."],
+  "graphs": {
+    "personal_chef": "personal_chef.graph:chef_graph"
+  },
+  "env": "./.env"
+}

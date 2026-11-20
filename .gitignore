@@ -1,5 +1,6 @@
 .env
 .venv/
+.langgraph_api/
 __pycache__/
 *.py[cod]
 .pytest_cache/
