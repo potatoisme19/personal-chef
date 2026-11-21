@@ -10,7 +10,7 @@ def summarize_thread(state: dict) -> dict:
         result = f"Selected recipe: {recipe.title}; serves {recipe.servings}."
         if evaluation:
             result += f" Suitability score: {evaluation.score}/100."
-    messages = [*state.get("messages", []), f"Assistant: {result}"]
+    messages = [*state.get("recent_turns", []), f"Assistant: {result}"]
     prompt = (
         "Update a compact memory for a cooking assistant. Preserve durable user preferences, allergies, "
         "dietary restrictions, disliked ingredients, serving defaults, and unresolved follow-ups. Include "
@@ -22,4 +22,4 @@ def summarize_thread(state: dict) -> dict:
     summary = get_chat_model().invoke(prompt).content
     if not isinstance(summary, str):
         summary = str(summary)
-    return {"memory_summary": summary.strip(), "messages": messages[-4:]}
+    return {"memory_summary": summary.strip(), "recent_turns": messages[-4:]}

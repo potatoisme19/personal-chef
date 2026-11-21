@@ -22,5 +22,10 @@ class RecipeEvaluation(BaseModel):
     suitable: bool = True
 
 
+class EvaluatedRecipe(BaseModel):
+    recipe: Recipe
+    evaluation: RecipeEvaluation
+
+
 class RecipeCandidates(BaseModel):
     recipes: list[Recipe] = Field(default_factory=list)

@@ -1,6 +1,6 @@
 from ..config import get_chat_model
 from ..schemas.preferences import Preferences
-from ..schemas.recipes import Recipe, RecipeEvaluation
+from ..schemas.recipes import EvaluatedRecipe, Recipe, RecipeEvaluation
 
 
 def evaluate_recipe(recipe: Recipe, preferences: Preferences | None = None) -> RecipeEvaluation:
@@ -15,10 +15,11 @@ def evaluate_recipe(recipe: Recipe, preferences: Preferences | None = None) -> R
 def recipe_evaluation_agent(state: dict) -> dict:
     candidates = state.get("candidates", [])
     if not candidates:
-        return {"errors": [*state.get("errors", []), "No recipe candidates to evaluate"]}
+        return {"recipe_options": [], "selection_pending": False, "errors": [*state.get("errors", []), "No recipe candidates to evaluate"]}
     evaluations = [evaluate_recipe(r, state.get("preferences")) for r in candidates]
-    eligible = [(r, e) for r, e in zip(candidates, evaluations) if e.suitable]
+    eligible = [EvaluatedRecipe(recipe=r, evaluation=e) for r, e in zip(candidates, evaluations) if e.suitable]
     if not eligible:
-        return {"evaluation": max(evaluations, key=lambda e: e.score), "errors": [*state.get("errors", []), "No candidate passed the suitability check"]}
-    recipe, evaluation = max(eligible, key=lambda pair: pair[1].score)
-    return {"recipe": recipe, "evaluation": evaluation}
+        return {"recipe_options": [], "selection_pending": False, "evaluation": max(evaluations, key=lambda e: e.score), "errors": [*state.get("errors", []), "No candidate passed the suitability check"]}
+    eligible.sort(key=lambda item: item.evaluation.score, reverse=True)
+    options = eligible[:3]
+    return {"recipe_options": options, "selection_pending": len(options) > 1}

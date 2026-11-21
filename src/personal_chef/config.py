@@ -10,7 +10,9 @@ def get_chat_model():
         from langchain_openai import ChatOpenAI
     except ImportError as exc:
         raise RuntimeError("Install langchain-openai to run the agents") from exc
-    kwargs = {"model": os.getenv("MODEL_NAME", "gpt-4o-mini"), "temperature": 0.2}
+    # Keep every specialist and memory call on the requested model.
+    # GPT-5 uses provider-default sampling settings, so omit temperature.
+    kwargs = {"model": "gpt-5.4-mini"}
     if os.getenv("MODEL_API_KEY"):
         kwargs["api_key"] = os.environ["MODEL_API_KEY"]
     if os.getenv("MODEL_BASE_URL"):

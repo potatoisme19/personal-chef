@@ -1,6 +1,6 @@
 # Personal Chef
 
-A LangGraph-powered personal cooking assistant that turns a natural-language cooking request into a recipe suggestion. It extracts ingredients and preferences, researches candidates, checks dietary fit, and adapts a suitable recipe. The graph can ask one focused clarification question and keeps a compact preference summary within each conversation thread.
+A LangGraph-powered personal cooking assistant that turns a natural-language cooking request into a recipe suggestion. It extracts ingredients and preferences, researches candidates, checks dietary fit, and adapts a suitable recipe. Before recipe research, the graph asks for ingredients and explicit allergy/dietary requirements when they are missing, then keeps a compact preference summary within each conversation thread.
 
 ## Project structure
 
@@ -12,12 +12,14 @@ A LangGraph-powered personal cooking assistant that turns a natural-language coo
 - `notebooks/` — space for exploratory and tutorial notebooks.
 
 The typed LangGraph flow accepts one natural-language request. It extracts
-ingredients and preferences, checks whether a missing detail blocks a useful
-answer, researches recipe candidates, evaluates their fit, adapts the best
-eligible recipe, and formats a user-facing answer. If a key detail is missing,
-it asks one concise clarification question. A checkpointer stores recent turns
-and a short preference summary per thread; use a new Studio thread for a
-separate conversation.
+ingredients and preferences, requires ingredients and confirmed allergy/dietary
+requirements, researches recipe candidates only after those are supplied,
+evaluates their fit, lets the user
+choose among up to three suitable options, adapts the selected recipe, and
+formats the final answer. If required intake details are missing, it asks one
+concise clarification question. A checkpointer stores recent turns and a short
+preference summary per thread; use a new Studio thread for a separate
+conversation.
 
 ## Agents and tools
 
@@ -28,6 +30,7 @@ separate conversation.
 | Clarification check (`assess_clarification`) | Decides whether a missing ingredient or ambiguous safety restriction prevents a useful, safe suggestion. | Structured model output using `ClarificationDecision`; optional question is returned by `ask_for_clarification`. |
 | Recipe research (`recipe_research_agent`) | Searches for recipe sources and turns the available evidence into structured candidates. | `search_recipes` (Tavily); structured `Recipe` candidates. |
 | Recipe evaluation (`recipe_evaluation_agent`) | Scores candidates against the request, rejects allergy or dietary conflicts, and selects the highest scoring suitable recipe. | Structured model output using `RecipeEvaluation`. |
+| Recipe choice (`choose_recipe_with_human`) | Pauses after evaluation when multiple suitable candidates remain and waits for the user's numbered choice. | LangGraph `interrupt()` with a typed `choice` field; resumes the same thread. |
 | Recipe adaptation (`recipe_adaptation_agent`) | Scales quantities to the requested servings and adapts the selected recipe to the user's preferences. | `scale_quantity`; structured model output using `Recipe`. |
 | Response formatter (`format_recipe_response`) | Formats the selected recipe, ingredients, method, and source as the final answer. | No external tools. |
 | Thread memory (`summarize_thread`) | Compresses recent turns and the latest result into a short summary so durable preferences can carry into later requests in the same thread. | Chat model; graph checkpointer stores the thread state. |
@@ -37,18 +40,23 @@ and `convert_temperature` for Celsius/Fahrenheit conversion. These are
 available for future graph steps; the current discovery path uses web search
 and quantity scaling.
 
-### Example request in LangGraph Studio
+### Using the graph in LangGraph Studio
 
-The graph input has one field, `request`. In Studio, enter a prompt such as:
+Select the graph and use Chat mode. Send a normal message, for example:
 
-```json
-{
-  "request": "I have chicken, baked beans, and rice. Suggest dinner for four. I am allergic to peanuts and want a meal that takes under 30 minutes."
-}
-```
+> I have chicken, baked beans, and rice. Suggest dinner for four. I am allergic to peanuts and want a meal that takes under 30 minutes.
 
-The graph returns an `answer` containing either a recipe or a clarification
-question. You can also invoke it from Python:
+The graph accepts and returns LangChain `messages`, so the Agent UI can render
+assistant replies and keep the conversation in its thread. After evaluation,
+if at least two suitable recipes remain, the graph pauses with a list labelled
+`1.`, `2.`, and `3.` as available. Enter a number or recipe title to resume and
+receive the full recipe. The same-thread chat path also recognizes replies such
+as “option 2” without rerunning recipe research.
+The UI/server assigns and passes the `thread_id` in run configuration; do not
+put it in the message. Continue in the same thread to retain short-term memory,
+or start a new thread for a separate conversation.
+
+You can also invoke it from Python:
 
 ```python
 from personal_chef.workflows.discovery import discover_recipe
@@ -57,7 +65,7 @@ result = discover_recipe(
     "I have chicken, baked beans, and rice. Suggest dinner for four. "
     "I am allergic to peanuts and want a meal under 30 minutes."
 )
-print(result["answer"])
+print(result["messages"][-1].content)
 ```
 
 ## Setup
@@ -75,6 +83,6 @@ Keep `.env` local. Never commit API keys or other secrets.
 
 Start the local LangGraph development server with `uv run langgraph dev`. The
 graph is registered as `personal_chef` in `langgraph.json`. Configure
-`TAVILY_API_KEY` for web search and `MODEL_API_KEY` for the chat model. Set
-`MODEL_NAME` (default `gpt-4o-mini`) or `MODEL_BASE_URL` for a compatible
-provider. Run the test suite with `uv run --extra dev pytest`.
+`TAVILY_API_KEY` for web search and `MODEL_API_KEY` for the chat model. All
+agent and memory calls use `gpt-5.4-mini`. Set `MODEL_BASE_URL` only when using a
+compatible endpoint. Run the test suite with `uv run --extra dev pytest`.
