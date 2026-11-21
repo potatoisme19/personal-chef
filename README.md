@@ -1,6 +1,8 @@
-# Personal Chef
+# Personal Shef
 
 A LangGraph-powered personal cooking assistant that turns a natural-language cooking request into a recipe suggestion. It extracts ingredients and preferences, researches candidates, checks dietary fit, and adapts a suitable recipe. Before recipe research, the graph asks for ingredients and explicit allergy/dietary requirements when they are missing, then keeps a compact preference summary within each conversation thread.
+
+PS: consider dinner served ;)
 
 ## Project structure
 
